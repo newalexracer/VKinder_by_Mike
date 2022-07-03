@@ -1,1 +1,1 @@
-# VKinder_by_Mike
+Курсовая работа "VKinder"
