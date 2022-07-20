@@ -10,6 +10,14 @@ import requests
 
 class VK:
     url = 'https://api.vk.com/method/'
+    
+    search_parameter = {'gender': None,
+                        'age_from': None,
+                        'age_to': None,
+                        'city': None,
+                        'status': None,
+                        'user_id': None
+                        }
 
     def __init__(self, token, version):
         self.params = {
