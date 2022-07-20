@@ -3,6 +3,12 @@ import enum
 from var_name import database_name
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy_utils import database_exists, create_database
+
+engine = sq.create_engine(database_name)
+Session = sessionmaker(bind=engine)
+if not database_exists(engine.url):
+     create_database(engine.url)
 
 Base = declarative_base()
 engine = sq.create_engine(database_name)
