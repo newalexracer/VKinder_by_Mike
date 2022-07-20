@@ -31,7 +31,7 @@ class VK:
         response.raise_for_status()
         result = response.json()
         if 'error' in result:
-            print(f'Код ошибк: {result["error"]["error_code"]}')
+            print(f'Код ошибки: {result["error"]["error_code"]}')
             if result["error"]["error_code"] == 5:
                 print('ключ не валидный')
             elif result["error"]["error_code"] == 27:
