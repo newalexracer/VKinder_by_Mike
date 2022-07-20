@@ -2,7 +2,6 @@ import time
 from random import randrange
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
-from application.db.work_with_database import Session, EnumRelations, EnumSex, Base, engine
 from application.db.work_with_database import Users, Customers, Candidates
 from var_name import token_app, token_group
 import requests
