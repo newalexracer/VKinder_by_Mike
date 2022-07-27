@@ -10,14 +10,60 @@ import requests
 class VK:
     url = 'https://api.vk.com/method/'
     
-    search_parameter = {'gender': None,
-                        'age_from': None,
-                        'age_to': None,
-                        'city': None,
-                        'status': None,
-                        'user_id': None
-                        }
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.couple_id = 0
+        self.user = db.MainUser
+        self.offset = 0
+        self.couple_id = 0
+        self.couple_name = ''
+        self.top_photo = ''
 
+    def name(self):
+        name = self.info()[0]['first_name']
+        return name
+
+    def info(self):
+        info = bot_vk.method("users.get", {"user_ids": self.user_id,
+                                           "fields": 'sex, bdate, city, relation'})
+        return info
+
+    def age(self):
+        if 'bdate' in self.info()[0].keys():
+            bdate = self.info()[0]['bdate']
+            if bdate is not None and len(bdate.split('.')) == 3:
+                birth = datetime.strptime(bdate, '%d.%m.%Y').year
+                this = datetime.now().year
+                age = this - birth
+                return age
+            else:
+                return 'Возраст неизвестен'
+        else:
+            return 'Возраст неизвестен'
+
+    def sex(self):
+        sex = self.info()[0]['sex']
+        if sex == 1:
+            return 2
+        elif sex == 2:
+            return 1
+        else:
+            return 0
+
+    def city(self):
+        if 'city' in self.info()[0].keys():
+            city = self.info()[0]['city']['id']
+            return city
+        else:
+            return 0
+
+    def relation(self):
+        if 'relation' in self.info()[0].keys():
+            relation = self.info()[0]['relation']
+            return relation
+        else:
+            return 'Семейное положение скрыто!'
+    
     def __init__(self, token, version):
         self.params = {
             'access_token': token,
