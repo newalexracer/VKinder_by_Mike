@@ -25,14 +25,14 @@ class VK:
 
     def info(self):
         info = bot_vk.method("users.get", {"user_ids": self.user_id,
-                                           "fields": 'sex, bdate, city, relation'})
+                                           "fields": 'sex, birthdate, city, relation'})
         return info
 
     def age(self):
         if 'bdate' in self.info()[0].keys():
-            bdate = self.info()[0]['bdate']
-            if bdate is not None and len(bdate.split('.')) == 3:
-                birth = datetime.strptime(bdate, '%d.%m.%Y').year
+            bdate = self.info()[0]['birthdate']
+            if bdate is not None and len(birthdate.split('.')) == 3:
+                birth = datetime.strptime(birthdate, '%d.%m.%Y').year
                 this = datetime.now().year
                 age = this - birth
                 return age
@@ -62,7 +62,103 @@ class VK:
             relation = self.info()[0]['relation']
             return relation
         else:
-            return 'Семейное положение скрыто!'
+            return 'Скрыто семейное положение'
+
+    def bot_start(self):
+        db.create_tables()
+        self.name()
+        self.age()
+        self.city()
+        self.relation()
+        try:
+            self.user = db.MainUser(vk_id=self.user_id, name=self.name(), age=self.age(),
+                                    city=self.city(), relation=self.relation())
+            db.add_user(self.user)
+        except IntegrityError:
+            pass
+        self.find_couple()
+        self.get_top_photo()
+        write_msg(event.user_id, f'Посмотри кого нашли:\n'
+                                 f'Имя: {self.couple_name}, ссылка: vk.com/id{self.couple_id}', self.top_photo)
+        return self.couple()
+
+    def couple(self):
+        write_msg(event.user_id, f'Пиши ДАЛЕЕ, чтобы продолжить поиск, и сохранить человека в базе данных, '
+                                 f'или пиши СТОП, чтобы не искать, или ПРОПУСТИТЬ, чтобы пропустить человека '
+                                 f'и искать следующего, если пропустишь, пара снова найдется.')
+        while True:
+            for new_event in longpoll.listen():
+                if new_event.type == VkEventType.MESSAGE_NEW and event.to_me:
+                    if new_event.message.lower() == 'далее':
+                        try:
+                            found_couple = db.CoupleUser(vk_id=self.couple_id, name=self.couple_name,
+                                                         id_main_user=self.user_id)
+                            db.add_user(found_couple)
+                        except IntegrityError:
+                            pass
+                        write_msg(event.user_id, 'Ищу следующую пару...')
+                        self.offset += 1
+                        self.find_couple()
+                        self.get_top_photo()
+                        write_msg(event.user_id, f'Посмотри кого нашли:\n'
+                                                 f'Имя: {self.couple_name}, ссылка: vk.com/id{self.couple_id}',
+                                                 self.top_photo)
+                        return self.couple()
+                    elif new_event.message.lower() == 'стоп' or new_event.message.lower() == 'нет':
+                        write_msg(event.user_id, 'Заканчиваем поиск, если хочешь продолжить, пиши ПРОДОЛЖИТЬ.')
+                    elif new_event.message.lower() == 'продолжить' or new_event.message.lower() == 'пропустить':
+                        write_msg(event.user_id, f'Ищу следующую пару...')
+                        self.offset += 1
+                        self.find_couple()
+                        self.get_top_photo()
+                        write_msg(event.user_id, f'Посмотри кого нашли:\n'
+                                                 f'Имя: {self.couple_name}, ссылка: vk.com/id{self.couple_id}',
+                                  self.top_photo)
+                        return self.couple()
+
+    def find_couple(self):
+        resp = user_vk.method('users.search', {'count': 1, 'city': self.city(), 'sex': self.sex(), 'age': self.age(),
+                                               'relation': self.relation(), 'offset': self.offset, 'status': (1, 6),
+                                               'has photo': 1, 'fields': 'is_closed'})
+        if resp['items'][0]['id'] in db.check_user():
+            self.offset += 1
+            self.find_couple()
+        else:
+            if resp['items']:
+                for couple in resp['items']:
+                    if couple['is_closed']:
+                        self.offset += 1
+                        self.find_couple()
+                    else:
+                        self.couple_id = couple['id']
+                        self.couple_name = couple['first_name']
+            else:
+                self.offset += 1
+                self.find_couple()
+
+    def get_top_photo(self):
+        photo_list = []
+        resp = user_vk.method('photos.get', {'owner_id': self.couple_id,
+                                             'album_id': 'profile',
+                                             'access_token': my_token,
+                                             'extended': 1,
+                                             'v': '5.131'})
+        photos = []
+        for photo in resp['items']:
+            photo_info = {'id': photo['id'], 'owner_id': photo['owner_id'], }
+            count = 0
+            try:
+                count_com = user_vk.method('photos.getComments', {'owner_id': self.couple_id, 'photo_id': photo['id']})
+                count = count_com['count']
+            except ApiError:
+                pass
+            photo_info['popular'] = photo['likes']['count'] + count
+            photo_list.append(photo_info)
+        photo_list = sorted(photo_list, key=lambda k: k['popular'], reverse=True)
+        for i in photo_list:
+            photos.append(f"photo{i['owner_id']}_{i['id']}")
+        self.top_photo = ','.join(photos[:3])
+        return self.top_photo 
     
     def __init__(self, token, version):
         self.params = {
