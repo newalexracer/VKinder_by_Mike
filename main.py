@@ -264,7 +264,38 @@ class VK:
                       'first_name_, home_town, last_name_, relation, sex, status, photo'
         }
         return self.getvk(url=users_get_url, new_params=users_get_params)
-
+      
+    def find_user(self, user_id):
+        #по полученным данным найдем человека (автопоиск)
+        url = f'https://api.vk.com/method/users.search'
+        params = {'access_token': user_token_vk,
+                  'v': '5.131',
+                  'sex': self.get_sex(user_id),
+                  'age': self.get_age(user_id),
+                  'city': self.city(user_id),
+                  'fields': 'is_closed',
+                  'fields': 'id',
+                  'fields': 'first_name',
+                  'fields': 'last_name',
+                  'status': '1' or '6',
+                  'count': 500}
+        resp = requests.get(url, params=params)
+        resp_json = resp.json()
+        try:
+            dict_1 = resp_json['response']
+            list_1 = dict_1['items']
+            for person_dict in list_1:
+                if person_dict.get('is_closed') == False:
+                    first_name = person_dict.get('first_name')
+                    last_name = person_dict.get('last_name')
+                    vk_id = str(person_dict.get('id'))
+                    vk_link = 'vk.com/id' + str(person_dict.get('id'))
+                    insert_data_users(first_name, last_name, vk_id, vk_link)
+                else:
+                    continue
+            return f'Поиск завершён'
+        except KeyError:
+            write_msg(user_id, 'Ошибка при получении токена')
 
 class ChatBot:
     # нельзя использовать токен пользователя, только токен группы
