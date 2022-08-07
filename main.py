@@ -25,14 +25,14 @@ class VK:
 
     def info(self):
         info = bot_vk.method("users.get", {"user_ids": self.user_id,
-                                           "fields": 'sex, birthdate, city, relation'})
+                                           "fields": 'sex, bdate, city, relation'})
         return info
 
-    def age(self):
+    def get_age(self, user_id):
         if 'bdate' in self.info()[0].keys():
-            bdate = self.info()[0]['birthdate']
-            if bdate is not None and len(birthdate.split('.')) == 3:
-                birth = datetime.strptime(birthdate, '%d.%m.%Y').year
+            bdate = self.info()[0]['bdate']
+            if bdate is not None and len(bdate.split('.')) == 3:
+                birth = datetime.strptime(bdate, '%d.%m.%Y').year
                 this = datetime.now().year
                 age = this - birth
                 return age
@@ -41,7 +41,7 @@ class VK:
         else:
             return 'Возраст неизвестен'
 
-    def sex(self):
+    def get_sex(self, user_id):
         sex = self.info()[0]['sex']
         if sex == 1:
             return 2
@@ -50,7 +50,7 @@ class VK:
         else:
             return 0
 
-    def city(self):
+    def get_city(self, user_id):
         if 'city' in self.info()[0].keys():
             city = self.info()[0]['city']['id']
             return city
@@ -264,7 +264,7 @@ class VK:
                       'first_name_, home_town, last_name_, relation, sex, status, photo'
         }
         return self.getvk(url=users_get_url, new_params=users_get_params)
-      
+
     def find_user(self, user_id):
         #по полученным данным найдем человека (автопоиск)
         url = f'https://api.vk.com/method/users.search'
@@ -295,7 +295,7 @@ class VK:
                     continue
             return f'Поиск завершён'
         except KeyError:
-            write_msg(user_id, 'Ошибка при получении токена')
+            self.write_msg(user_id, 'Ошибка при получении токена')
 
 class ChatBot:
     # нельзя использовать токен пользователя, только токен группы
@@ -322,7 +322,6 @@ class ChatBot:
         })
         return req
 
-
 session = Session()
 # для подключения к VkApi используем только токен группы
 chat_bot = ChatBot(token_group)
@@ -344,7 +343,6 @@ user_data_master = {
     'schools': []
 }
 
-
 sex_list = {0: 'не указано', 1: 'женский', 2: 'мужской'}
 relation_list = {
     0: 'не указано',
@@ -359,7 +357,6 @@ relation_list = {
 }
 
 user_token_tuple = {}
-
 
 def create_message_help_new():
     return "Будет неплохо, если вы предоставите свой токен пользователя:\n" \
@@ -381,7 +378,6 @@ def create_message_help_new():
            "   7 - влюблён/влюблена;\n" \
            "   8 - в гражданском браке;\n"
 
-
 def added_customer_orm(id_user, user_id):
     # добавление пользователя VK в базу customers
     user_in_customer = session.query(Customers).join(
@@ -395,7 +391,6 @@ def added_customer_orm(id_user, user_id):
         print(f'+пользователь {user_id} добавлен в базу customers')
     return user_in_customer.id_customer
 
-
 def find_candidate_orm(id_user, user_id):
     # ищет человека в таблице candidates с привязкой к пользователю
     user_in_candidate = session.query(Users).join(
@@ -407,7 +402,6 @@ def find_candidate_orm(id_user, user_id):
         session.add(new_customer)
         session.commit()
         print(f'+пользователь {user_id} добавлен в базу кандидатов')
-
 
 def added_user_orm(user_id, user_data):
     user = session.query(Users).filter(Users.user_id == user_id).first()
@@ -427,7 +421,6 @@ def added_user_orm(user_id, user_data):
     else:
         print(f'+пользователь {user_id} найден в базе пользователей')
     return user.id_user
-
 
 def get_search_parameters(argument, token):
     key = ['возраст от', 'возраст до', 'пол', 'город', 'регион', 'семейное положение']
@@ -452,7 +445,6 @@ def get_search_parameters(argument, token):
     find_param['город'] = id_city
     find_param['семейное положение'] = int(find_param['семейное положение'])
     return find_msg, find_param
-
 
 def candidate_list_processing(user_id, user_chat, find_param, token):
     # функция обработки списка кандидатов
@@ -487,7 +479,6 @@ def candidate_list_processing(user_id, user_chat, find_param, token):
             return candidate_user_url, msg_attachment
     return None, None
 
-
 def adding_customers_and_candidates(id_customer, candidate_id_user):
     # добавление заказчиков и кандидатов
     customer = session.query(Customers).filter(Customers.id_customer == id_customer).first()
@@ -499,7 +490,6 @@ def adding_customers_and_candidates(id_customer, candidate_id_user):
     customer.candidates.append(candidate)
     session.add(customer)
     session.commit()
-
 
 def photo_list_processing(candidate_user_id, token):
     # обработка списка фотографий
@@ -518,7 +508,6 @@ def photo_list_processing(candidate_user_id, token):
     temp_photos = tuple(sorted(temp_photos))
     tuple_photos = temp_photos[:-4:-1]
     return tuple_photos
-
 
 def find_command_processing(user_id, user_chat, argument):
     # обработка команды найди
@@ -557,7 +546,6 @@ def find_command_processing(user_id, user_chat, argument):
             message = 'Вы ввели не все параметры, повторите ввод'
             chat_bot.write_msg(user_id, message, 'attachment')
 
-
 def user_dictionary_processing_online(user_id, user_token=''):
     # обработка словаря пользователей он-лайн
     current_time = int(time.time())
@@ -568,14 +556,12 @@ def user_dictionary_processing_online(user_id, user_token=''):
     user_token_tuple[user_id] = [user_token, current_time]
     return user_token
 
-
 def deleting_offline_users_from_dictionary():
     # удаление пользователей офф лайн из словаря
     current_time = int(time.time())
     for key, value in user_token_tuple.items():
         if value[1] - current_time > 3600:
             del user_token_tuple[key]
-
 
 def getting_token(user_id, argument):
     if len(argument) > 0:
@@ -596,7 +582,6 @@ def getting_token(user_id, argument):
                   'Для этого введите команду: /токен ваш_токен'
         chat_bot.write_msg(user_id, message, 'attachment')
 
-
 def command_processing(user_id, user_chat, request):
     input_msg = request[1:].split(' ')
     print('вошли в обработку команд')
@@ -612,7 +597,6 @@ def command_processing(user_id, user_chat, request):
         find_command_processing(user_id, user_chat, argument)
     elif command == 'токен':
         getting_token(user_id, argument)
-
 
 def main():
     # поговорить с чат-ботом
@@ -637,7 +621,6 @@ def main():
                 chat_bot.write_msg(user_id, "Пока((", 'attachment')
             else:
                 chat_bot.write_msg(user_id, "Не понял вашего ответа...", 'attachment')
-
 
 if __name__ == '__main__':
     main()
